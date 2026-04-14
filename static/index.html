@@ -1,0 +1,484 @@
+<!-- index.html (美化版 + 图片加载兜底) -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>辽宁高铁TSP路径求解 | 优化版</title>
+    <!-- 引入Element-UI和Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(120deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 30px auto;
+            padding-bottom: 50px;
+        }
+        
+        /* 头部卡片样式 */
+        .header-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: none !important;
+        }
+        
+        .header-card .el-card__header {
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px 25px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .header-card .el-card__body {
+            padding: 30px 25px;
+        }
+        
+        /* 表单样式 */
+        .demo-form-inline {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .el-form-item__label {
+            color: white !important;
+            font-size: 16px;
+        }
+        
+        .el-select {
+            width: 280px;
+        }
+        
+        .el-select .el-input__inner {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            height: 45px;
+            font-size: 15px;
+            padding: 0 15px;
+        }
+        
+        .el-button--primary {
+            background: #42b983;
+            border-color: #42b983;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .el-button--primary:hover {
+            background: #36a972;
+            border-color: #36a972;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 185, 131, 0.3);
+        }
+        
+        /* 结果卡片样式 */
+        .result-card {
+            margin-top: 30px;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: none !important;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result-card .el-card__header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 18px 25px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .result-card .el-card__body {
+            padding: 25px;
+        }
+        
+        /* 路径展示样式 */
+        .path-display {
+            margin: 15px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f0f8fb 0%, #e8f4f8 100%);
+            border-radius: 10px;
+            white-space: pre-wrap;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #2d3748;
+            border-left: 5px solid #4299e1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 描述列表样式 */
+        .el-descriptions {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .el-descriptions-item__label {
+            font-weight: 600;
+            color: #4a5568 !important;
+        }
+        
+        /* 表格样式 */
+        .segment-table {
+            margin-top: 25px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .el-table th {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .el-table td {
+            color: #4a5568;
+        }
+        
+        .el-table--border th {
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        /* 城市图片预览样式 */
+        .city-image-preview {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .city-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease;
+        }
+        
+        .city-img:hover {
+            transform: scale(1.1);
+        }
+        
+        .city-name-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .container {
+                width: 98%;
+                margin: 15px auto;
+            }
+            
+            .demo-form-inline {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .el-select {
+                width: 100%;
+            }
+            
+            .city-image-preview {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .path-display {
+                font-size: 14px;
+                padding: 15px;
+            }
+            
+            .el-col {
+                margin-bottom: 20px;
+            }
+        }
+        
+        /* 加载动画优化 */
+        .el-loading-mask {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .el-loading-spinner .circular {
+            height: 40px;
+            width: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <!-- 头部卡片 -->
+        <el-card class="header-card" title="🚄 辽宁省14地级市高铁TSP最短路径求解器">
+            <el-form :inline="true" :model="form" class="demo-form-inline">
+                <el-form-item label="选择起点城市：">
+                    <el-select 
+                        v-model="form.startCity" 
+                        placeholder="请选择起点城市"
+                        @change="previewCityImage">
+                        <el-option
+                            v-for="city in cityList"
+                            :key="city"
+                            :label="city"
+                            :value="city">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                
+                <!-- 城市图片预览 -->
+                <div v-if="form.startCity" class="city-image-preview">
+                    <img 
+                        :src="`/image/${form.startCity}.png`" 
+                        :alt="form.startCity" 
+                        class="city-img"
+                        @error="handleImgError($event, form.startCity)">
+                    <span class="city-name-text">{{ form.startCity }}市</span>
+                </div>
+                
+                <el-form-item>
+                    <el-button type="primary" @click="solveTSP" :loading="loading">
+                        <i class="fa fa-search" aria-hidden="true"></i> 开始求解
+                    </el-button>
+                </el-form-item>
+            </el-form>
+        </el-card>
+
+        <!-- 结果展示区域 -->
+        <el-card v-if="result" class="result-card" title="🎯 求解结果">
+            <el-row :gutter="20">
+                <el-col :xs="24" :sm="24" :md="8" :lg="8">
+                    <el-descriptions :column="1" border>
+                        <el-descriptions-item label="起点城市">
+                            <span style="color: #4299e1; font-weight: 600;">{{ form.startCity }}</span>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="最低总票价">
+                            <span style="color: #e53e3e; font-weight: 600;">{{ result.min_total_fare }} 元</span>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="路径总段数">
+                            {{ result.shortest_path.length - 1 }} 段
+                        </el-descriptions-item>
+                        <el-descriptions-item label="操作">
+                            <el-button 
+                                type="text" 
+                                @click="downloadReport"
+                                style="color: #4299e1; font-weight: 600;">
+                                <i class="fa fa-download" aria-hidden="true"></i> 下载详细报告
+                            </el-button>
+                        </el-descriptions-item>
+                    </el-descriptions>
+                </el-col>
+                <el-col :xs="24" :sm="24" :md="16" :lg="16">
+                    <div style="margin-bottom: 10px; font-weight: 600; color: #4a5568;">
+                        <i class="fa fa-map-signs" aria-hidden="true"></i> 最短路径：
+                    </div>
+                    <div class="path-display">
+                        {{ result.shortest_path.join(' → ') }}
+                    </div>
+                    
+                    <!-- 路径城市图片展示 -->
+                    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <div v-for="(city, idx) in result.shortest_path" :key="idx" style="text-align: center;">
+                            <img 
+                                :src="`/image/${city}.png`" 
+                                :alt="city" 
+                                style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #4299e1;"
+                                @error="handleImgError($event, city)">
+                            <p style="margin-top: 5px; font-size: 12px; color: #4a5568;">{{ city }}</p>
+                        </div>
+                    </div>
+                </el-col>
+            </el-row>
+
+            <!-- 分段明细表格 -->
+            <el-table 
+                :data="result.segments" 
+                border 
+                class="segment-table"
+                style="width: 100%;"
+                stripe
+                highlight-current-row>
+                <el-table-column
+                    prop="index"
+                    label="序号"
+                    width="80">
+                </el-table-column>
+                <el-table-column
+                    prop="from_city"
+                    label="出发城市"
+                    width="120">
+                    <template slot-scope="scope">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <img 
+                                :src="`/image/${scope.row.from_city}.png`" 
+                                :alt="scope.row.from_city" 
+                                style="width: 25px; height: 25px; border-radius: 50%;"
+                                @error="handleImgError($event, scope.row.from_city)">
+                            {{ scope.row.from_city }}
+                        </div>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                    prop="to_city"
+                    label="到达城市"
+                    width="120">
+                    <template slot-scope="scope">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <img 
+                                :src="`/image/${scope.row.to_city}.png`" 
+                                :alt="scope.row.to_city" 
+                                style="width: 25px; height: 25px; border-radius: 50%;"
+                                @error="handleImgError($event, scope.row.to_city)">
+                            {{ scope.row.to_city }}
+                        </div>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                    prop="fare"
+                    label="票价（元）">
+                    <template slot-scope="scope">
+                        <span style="color: #ed8936;">{{ scope.row.fare }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                    prop="cumulative_fare"
+                    label="累计票价（元）">
+                    <template slot-scope="scope">
+                        <span style="color: #e53e3e; font-weight: 500;">{{ scope.row.cumulative_fare }}</span>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-card>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    form: {
+                        startCity: ''
+                    },
+                    cityList: [],
+                    result: null,
+                    loading: false
+                }
+            },
+            mounted() {
+                // 初始化加载城市列表
+                this.getCityList();
+            },
+            methods: {
+                // 图片加载失败兜底处理
+                handleImgError(event, cityName) {
+                    // 替换为公共默认图片（可替换为你自己的默认图URL）
+                    // 这里使用免费的默认占位图，也可以本地放置default.png后替换为 /image/default.png
+                    event.target.src = 'https://via.placeholder.com/100/4299e1/ffffff?text=' + encodeURIComponent(cityName);
+                    // 控制台提示（方便调试）
+                    console.log(`【图片加载失败】${cityName}.png 不存在，请检查文件路径/命名`);
+                },
+                // 获取城市列表
+                async getCityList() {
+                    try {
+                        const res = await fetch('http://127.0.0.1:5000/api/cities');
+                        const data = await res.json();
+                        if (data.code === 200) {
+                            this.cityList = data.data;
+                        }
+                    } catch (e) {
+                        this.$message.error('获取城市列表失败：' + e.message);
+                    }
+                },
+                // 预览城市图片
+                previewCityImage() {
+                    // 预加载图片，避免首次加载闪烁
+                    if (this.form.startCity) {
+                        const img = new Image();
+                        img.src = `/image/${this.form.startCity}.png`;
+                        img.onerror = () => {
+                            console.log(`未找到${this.form.startCity}的图片`);
+                        };
+                    }
+                },
+                // 求解TSP
+                async solveTSP() {
+                    if (!this.form.startCity) {
+                        this.$message.warning('请选择起点城市！');
+                        return;
+                    }
+                    this.loading = true;
+                    try {
+                        const res = await fetch('http://127.0.0.1:5000/api/solve-tsp', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                start_city: this.form.startCity
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.code === 200) {
+                            this.result = data.data;
+                            this.$message.success({
+                                message: '求解成功！',
+                                duration: 2000
+                            });
+                        } else {
+                            this.$message.error('求解失败：' + data.msg);
+                        }
+                    } catch (e) {
+                        this.$message.error('请求失败：' + e.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                // 下载报告
+                downloadReport() {
+                    window.open(`http://127.0.0.1:5000/api/report/${this.form.startCity}`);
+                }
+            }
+        })
+    </script>
+</body>
+</html>
